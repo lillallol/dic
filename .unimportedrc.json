@@ -1,0 +1,9 @@
+{
+    "entry": ["src/index.ts"],
+    "ignorePatterns": [
+        "**/src/index.ts",
+        "**/node_modules/**",
+        "**/*.test.ts",
+        "**/src/testUtils/**"
+    ]
+}
