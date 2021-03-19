@@ -5,17 +5,19 @@
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "scripts": {
+        "check-updates": "ncu",
+        "update": "npx ncu -u;npm install",
         "spell-check": "cspell \"./**/*\"",
         "lint": "eslint ./src --max-warnings=0 && tsc --noEmit -p tsconfig.json",
         "test": "rm -rf coverage && npx jest --clearCache && npx jest ./src --coverage --silent",
         "dead-files": "unimported",
         "build": "rm -rf ./dist && npx tsc -p tsconfig.build.json",
-        "pre-bump": "rm -rf ./dist && npm run spell-check && npm run lint && npm run test && npm run build && git add --all && git commit",
+        "pre-bump": "npm run spell-check && npm run lint && npm run test && npm run build && git add --all && git commit",
         "release": "npm run pre-bump && npm publish --access public && npm run after-bump",
         "bump-patch": "npm run pre-bump && npm version patch && npm publish && npm run after-bump",
         "bump-minor": "npm run pre-bump && npm version minor && npm publish && npm run after-bump",
         "bump-major": "npm run pre-bump && npm version major && npm publish && npm run after-bump",
-        "after-bump": "rm -rf ./dist && git push origin master"
+        "after-bump": "rm -rf ./dist ./coverage && git push origin master"
     },
     "keywords": [
         "DIC",
@@ -38,14 +40,16 @@
     "author": "lillallol",
     "license": "MIT",
     "devDependencies": {
-        "@typescript-eslint/eslint-plugin": "^4.15.1",
-        "@typescript-eslint/parser": "^4.15.1",
-        "cspell": "^5.2.4",
-        "eslint": "^7.20.0",
+        "@types/jest": "^26.0.21",
+        "@typescript-eslint/eslint-plugin": "^4.18.0",
+        "@typescript-eslint/parser": "^4.18.0",
+        "cspell": "^5.3.9",
+        "eslint": "^7.22.0",
         "jest": "^26.6.3",
-        "ts-jest": "^26.5.1",
-        "typescript": "^4.1.5",
-        "unimported": "^1.5.0"
+        "npm-check-updates": "^11.3.0",
+        "ts-jest": "^26.5.4",
+        "typescript": "^4.2.3",
+        "unimported": "^1.7.0"
     },
     "bugs": {
         "url": "https://github.com/lillallol/dic/issues"
