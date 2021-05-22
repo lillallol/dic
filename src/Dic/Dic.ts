@@ -1,71 +1,48 @@
-import { registerArgument, registry, memoizationTable, abstraction, registration } from "../types";
-import { getRegistrationOf } from "./getRegistrationOf";
+import { DicCtor, IDic } from "../publicApi";
+import { registry, memoizationTable, registration } from "../types";
+import { getRegistrationStrictOf } from "./getRegistrationStrictOf";
+import { throwIfAbstractionHasNoName } from "./throwIfAbstractionHasNoName";
 import { throwIfAlreadyRegistered } from "./throwIfAlreadyRegistered";
-import { throwIfNotAppropriateFactory } from "./throwIfNotAppropriateFactory";
-import { validateAbstraction } from "./validateAbstraction";
-import { validateDependencies } from "./validateDependencies";
-import { validateIntercept } from "./validateIntercept";
-import { validateLifeCycle } from "./validateLifeCycle";
+import { throwIfFactoryHasNoName } from "./throwIfNotAppropriateFactory";
 import { validateNumberOfDependencies } from "./validateNumberOfDependencies";
 
-/**
- * @description
- * Dependency injection container constructor.
- */
-export class Dic {
-    /**
-     * @description
-     * A map that maps each registered to dic, symbol, to its registration.
-     * Use that only if you really know what you are doing.
-     * @private
-     */
-    _registry: registry;
-    /**
-     * @description
-     * All abstractions that have been `get`ed and have singleton lifecycle are memoized. The
-     * memoization table, maps the abstraction to its value. You should manually add or remove abstractions
-     * and memoized values in tests for mocking and spying in tests.
-     * @private
-     */
-    _memoizationTable: memoizationTable;
+export const Dic: DicCtor = class Dic {
+    registry: registry;
+    memoizationTable: memoizationTable;
 
     constructor() {
-        this._registry = new Map();
-        this._memoizationTable = new Map();
+        this.registry = new Map();
+        this.memoizationTable = new Map();
     }
 
-    /**
-     * @description
-     * Run this function to delete all the memoized values for registrations with singleton lifecycle.
-     */
     clearMemoizationTable(): void {
-        this._memoizationTable.forEach((_v, k) => {
-            const registration = getRegistrationOf(this._registry, k);
-            const { hasBeenMemoized } = registration;
-            if (hasBeenMemoized !== undefined) {
-                registration.hasBeenMemoized = false;
-            }
+        this.memoizationTable.forEach((_v, k) => {
+            const registration = getRegistrationStrictOf(this.registry, k);
+            this.memoizationTable.delete(registration.abstraction);
         });
-        this._memoizationTable = new Map();
     }
 
-    /**
-     * @description
-     * Registers a factory to the dic.
-     */
-    register<P extends unknown[], R extends unknown>(_: registerArgument<P, R>): void {
-        const { abstraction, dependencies, lifeCycle, factory, intercept } = _;
+    register<P extends unknown[], R>(
+        arg0: {
+            abstraction: symbol;
+            dependencies: symbol[];
+            factory: (...args: P) => R;
+            lifeCycle: "singleton" | "transient";
+        },
+        arg1?: {
+            intercept?: ((parameters: { dic: IDic; concretion: R }) => R)[];
+        }
+    ): void {
+        const { abstraction, factory, dependencies, lifeCycle } = arg0;
+        if (arg1 === undefined) arg1 = {};
+        const { intercept } = arg1;
 
-        validateAbstraction(abstraction);
-        validateDependencies(dependencies);
-        throwIfNotAppropriateFactory(factory);
-        validateLifeCycle(lifeCycle);
-        if (intercept !== undefined) validateIntercept(intercept);
-        throwIfAlreadyRegistered(abstraction, this._registry);
+        throwIfAbstractionHasNoName(abstraction);
+        throwIfFactoryHasNoName(factory);
+        throwIfAlreadyRegistered(abstraction, this.registry);
         validateNumberOfDependencies(dependencies, factory);
 
-        this._registry.set(abstraction, {
-            hasBeenMemoized: false,
+        this.registry.set(abstraction, {
             abstraction: abstraction,
             factory: factory,
             dependencies: dependencies,
@@ -74,56 +51,23 @@ export class Dic {
         });
     }
 
-    /**
-     * @description
-     * Deletes the registration of the provided abstraction from the registry.
-     * It returns `true` if the abstraction registration was found and got deleted,
-     * and false if it was not found.
-     */
-    unregister(_: {
-        /**
-         * @description
-         * Abstraction to unregister from the registry.
-         */
-        abstraction: abstraction;
-    }): boolean {
-        const { abstraction } = _;
-        return this._registry.delete(abstraction);
+    unregister(parameters: { abstraction: symbol }): boolean {
+        const { abstraction } = parameters;
+        return this.registry.delete(abstraction);
     }
 
-    /**
-     * @description
-     * Returns the concretion of the provided abstraction.
-     */
-    get<T>(_: {
-        /**
-         * @description
-         * The abstraction for which you want to get the concretion. Make sure that the symbol
-         * is defined with a name (e.g `Symbol("my-name")`) so that more helpful error messages
-         * are given.
-         */
-        abstraction: abstraction;
-        /**
-         * @description
-         * Provide manual concretions to be injected when the abstraction
-         * dependency graph is composed.
-         *
-         * The already memoized values override the provided injection values.
-         */
-        inject?: Map<symbol, unknown>;
-    }): T {
-        const { abstraction, inject } = _;
-        const registration: registration = getRegistrationOf(this._registry, abstraction);
+    get<T>(parameters: { abstraction: symbol; inject?: Map<symbol, unknown> }): T {
+        const { abstraction, inject } = parameters;
+        const registration: registration = getRegistrationStrictOf(this.registry, abstraction);
+        const { dependencies, lifeCycle } = registration;
 
-        const { hasBeenMemoized, dependencies, lifeCycle } = registration;
-
-        if (hasBeenMemoized) {
-            return this._memoizationTable.get(abstraction) as T;
+        if (this.memoizationTable.has(abstraction)) {
+            return this.memoizationTable.get(abstraction) as T;
         }
         const { factory, intercept } = registration;
 
-        let valueToReturn = factory(
-            ...dependencies.map((dependency) => {
+        let valueToReturn: T = factory(
+            ...dependencies.map((dependency: symbol) => {
                 if (inject !== undefined && inject.has(dependency)) {
                     return inject.get(dependency);
                 }
@@ -131,15 +75,12 @@ export class Dic {
             })
         );
 
-        if (intercept !== undefined) {
-            valueToReturn = intercept.reduceRight((a, c) => c({ concretion: a, dic: this }), valueToReturn);
-        }
+        valueToReturn = intercept.reduceRight((a, c) => c({ concretion: a, dic: this }), valueToReturn);
 
         if (lifeCycle === "singleton") {
-            registration.hasBeenMemoized = true;
-            this._memoizationTable.set(abstraction, valueToReturn);
+            this.memoizationTable.set(abstraction, valueToReturn);
         }
 
         return valueToReturn;
     }
-}
+};

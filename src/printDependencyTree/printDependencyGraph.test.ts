@@ -1,21 +1,22 @@
 import { Dic } from "../Dic/Dic";
 import { tagUnindent } from "../es-utils/tagUnindent";
-import { printDependencyTree } from "./printDependencyTree";
+import { IDic } from "../publicApi";
+import { printDependencyGraph } from "./printDependencyGraph";
 
-let dic: Dic;
+let dic: IDic;
 beforeEach(() => {
     dic = new Dic();
 });
 
-describe(printDependencyTree.name, () => {
+describe(printDependencyGraph.name, () => {
     it("prints the dependency tree for the abstraction provided", () => {
         const TYPES = {
-            value: Symbol(),
-            inst: Symbol(),
-            fact1: Symbol(),
-            fact2_1: Symbol(),
-            fact2_2: Symbol(),
-            fact3_3: Symbol(),
+            value: Symbol("value"),
+            inst: Symbol("inst"),
+            fact1: Symbol("fact1"),
+            fact2_1: Symbol("fact2_1"),
+            fact2_2: Symbol("fact2_2"),
+            fact3_3: Symbol("fact3_3"),
         };
         type fact2_1 = ReturnType<typeof fact2_1>;
         type fact2_2 = ReturnType<typeof fact2_2>;
@@ -75,10 +76,10 @@ describe(printDependencyTree.name, () => {
             lifeCycle: "singleton",
         });
 
-        const receivedString = printDependencyTree({ dic, TYPES: TYPES, rootAbstraction: TYPES.fact1 });
-        console.log(receivedString);
+        const receivedString = printDependencyGraph({ dic, TYPES: TYPES, rootAbstraction: TYPES.fact1 });
+
         expect(receivedString).toBe(tagUnindent`
-            total number of unique components : 6
+            total number of unique components: 6
 
             fact1
             |_ fact2_1
@@ -91,11 +92,11 @@ describe(printDependencyTree.name, () => {
     });
     it("does not repeat common trees", () => {
         const TYPES = {
-            fact1: Symbol(),
-            fact2_1: Symbol(),
-            fact4_1: Symbol(),
-            fact4_2: Symbol(),
-            fact3_1: Symbol(),
+            fact1: Symbol("fact1"),
+            fact2_1: Symbol("fact2_1"),
+            fact4_1: Symbol("fact4_1"),
+            fact4_2: Symbol("fact4_2"),
+            fact3_1: Symbol("fact3_1"),
         };
         type fact2_1 = ReturnType<typeof fact2_1>;
         type fact3_1 = ReturnType<typeof fact3_1>;
@@ -148,10 +149,10 @@ describe(printDependencyTree.name, () => {
             lifeCycle: "singleton",
         });
 
-        const receivedString = printDependencyTree({ dic, rootAbstraction: TYPES.fact1, TYPES });
+        const receivedString = printDependencyGraph({ dic, rootAbstraction: TYPES.fact1, TYPES });
         // console.log(receivedString);
         expect(receivedString).toBe(tagUnindent`
-            total number of unique components : 5
+            total number of unique components: 5
 
             fact1
             |_ fact2_1

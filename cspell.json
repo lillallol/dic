@@ -18,6 +18,14 @@
         "IDE's",
         "ITYPES",
         "ecmascript",
-        "unimportedrc"
+        "unimportedrc",
+        "keyof",
+        "typeof",
+        "idic",
+        "throwifdeadregistrations",
+        "namesfactory",
+        "printdependencytree",
+        "printdependencygraph",
+        "validatedependencygraph"
     ]
 }

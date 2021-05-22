@@ -1,17 +1,19 @@
 {
-	"compilerOptions": {
-		"declaration": true,
-		"rootDir": "./src",
-		"outDir": "./dist",
-		"alwaysStrict": true,
-		"strict": true,
-		"module": "CommonJS",
-		"target": "ESNext",
-		"noImplicitAny": true,
-        "skipLibCheck": true,
-	},
-	"exclude": ["node_modules"],
-	"include": [
-		"./src/**/*.ts"
-	]
+    "compilerOptions": {
+        "declaration": true,
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "alwaysStrict": true,
+        "strict": true,
+        "module": "CommonJS",
+        "target": "ESNext",
+        "noImplicitAny": true,
+        "skipLibCheck": true
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "include": [
+        "./src/**/*.ts"
+    ]
 }

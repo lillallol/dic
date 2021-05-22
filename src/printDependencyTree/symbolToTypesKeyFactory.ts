@@ -1,7 +1,7 @@
-import { logAndError } from "../es-utils/logAndError";
-import type { types } from "../types";
+import { errorMessages } from "../errorMessages";
+import type { ITYPES } from "../publicApi";
 
-export function symbolToTypesKeyFactory(TYPES: types): (symbol: symbol) => string {
+export function symbolToTypesKeyFactory(TYPES: ITYPES): (symbol: symbol) => string {
     const symbolToTYPESPropertyPath: Map<symbol, string> = new Map();
 
     Object.entries(TYPES).forEach(([k, v]) => {
@@ -10,11 +10,7 @@ export function symbolToTypesKeyFactory(TYPES: types): (symbol: symbol) => strin
 
     return function (symbol: symbol): string {
         const path = symbolToTYPESPropertyPath.get(symbol);
-        if (path === undefined) logAndError(_errorMessages.symbolNotInTYPES(symbol));
+        if (path === undefined) throw Error(errorMessages.symbolNotInTYPES(symbol));
         return path;
     };
 }
-
-export const _errorMessages = {
-    symbolNotInTYPES: (symbol: symbol): unknown[] => ["Provided symbol : ", symbol, " not in TYPES"],
-};

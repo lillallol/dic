@@ -1,22 +1,24 @@
-import { logAndError } from "../es-utils/logAndError";
-import type { factory } from "../types";
+import { errorMessages } from "../errorMessages";
 
 /**
  * @description
- * Throws error if the provided value is not of type function of has undefined name.
+ * It throws if the provided factory has name property that is a string of zero length.
  */
-export function throwIfNotAppropriateFactory(factory: unknown): factory is factory {
-    if (typeof factory !== "function") logAndError(_errorMessages.factoryHasToBeAFunction(factory));
-    // this is because when I have the name of the factory I can give more helpful error messages
-    if (factory.name === "") throw Error(_errorMessages.factoryCanNotBeFunctionWithNoName);
-    return true;
+export function throwIfFactoryHasNoName(factory: Function): void {
+    // This case will never happen, look below for the reason.
+    //if (factory.name === "") throw Error(errorMessages.factoryHasToHaveName);
+    /**
+     * The following error is a result of the following:
+     *
+     * ```ts
+     * const registration = {
+     *   factory: function () { }
+     * }
+     * const { factory } = registration;
+     *
+     * expect(factory.name).toBe("factory");// yes the test passes
+     * ```
+     *
+     */
+    if (factory.name === "factory") throw Error(errorMessages.badFactoryName);
 }
-
-export const _errorMessages = {
-    factoryHasToBeAFunction: (factory: unknown): unknown[] => [
-        "Provided factory",
-        factory,
-        "has to be of type function.",
-    ],
-    factoryCanNotBeFunctionWithNoName: "Factory can not be arrow function.",
-};

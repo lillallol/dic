@@ -1,43 +1,36 @@
-import type { Dic } from "../Dic/Dic";
-import type { abstraction, types } from "../types";
-import { getRegistrationOf } from "../Dic/getRegistrationOf";
+import type { IDic, ITYPES } from "../publicApi";
+import { getRegistrationStrictOf } from "../Dic/getRegistrationStrictOf";
 import { symbolToTypesKeyFactory } from "./symbolToTypesKeyFactory";
 import { tagUnindent } from "../es-utils/tagUnindent";
+import { constants } from "../constants";
 
-/**
- * @description
- * It returns a string representation of the dependency graph starting from the 
- * provided abstraction.
- */
-export function printDependencyTree(_: {
+export const printDependencyGraph = function printDependencyGraph(parameters: {
     /**
      * @description
      * The dependency injection container instance that contains the registration of the dependency graph
      * that you want to print.
      */
-    dic: Dic;
+    dic: IDic;
     /**
      * @description
      * The abstraction for which the dependency graph will be printed.
      */
-    rootAbstraction: abstraction;
+    rootAbstraction: symbol;
     /**
      * @description
      * An object literal that maps strings to abstractions. The strings will be used as names for
      * the abstractions when the dependency tree is printed.
      */
-    TYPES: types;
+    TYPES: ITYPES;
 }): string {
-    const { dic, rootAbstraction, TYPES: types } = _;
+    const { dic, rootAbstraction, TYPES: types } = parameters;
+    const { stem, subGraphHasBeenAlreadyPrintedSymbol, twig } = constants;
     const symbolToTypesPropertyPath = symbolToTypesKeyFactory(types);
 
     let depth = 1;
     let maxDepth = 0;
     let totalNumberOfComponents = 0;
     const isCommon: Map<symbol, boolean> = new Map();
-
-    const twig = "|_";
-    const stem = "|";
 
     let stringToReturn = symbolToTypesPropertyPath(rootAbstraction);
 
@@ -52,15 +45,15 @@ export function printDependencyTree(_: {
 
     const twigTypeSeparator = " ";
 
-    (function recurse(currentAbstraction: abstraction, identString: string) {
+    (function recurse(currentAbstraction: symbol, identString: string) {
         if (depth > maxDepth) maxDepth = depth;
-        const registration = getRegistrationOf(dic._registry, currentAbstraction);
+        const registration = getRegistrationStrictOf(dic.registry, currentAbstraction);
         if (!isCommon.has(currentAbstraction)) totalNumberOfComponents++;
         const { dependencies } = registration;
         const lastI = dependencies.length - 1;
 
         if (isCommon.has(currentAbstraction) && dependencies.length !== 0) {
-            stringToReturn += " " + "<*>";
+            stringToReturn += " " + subGraphHasBeenAlreadyPrintedSymbol;
             return;
         } else {
             isCommon.set(currentAbstraction, true);
@@ -85,7 +78,7 @@ export function printDependencyTree(_: {
         }
     })(rootAbstraction, "");
 
-    stringToReturn = `total number of unique components : ${totalNumberOfComponents}\n` + "\n" + stringToReturn;
+    stringToReturn = `total number of unique components: ${totalNumberOfComponents}\n` + "\n" + stringToReturn;
 
     return stringToReturn.trim();
-}
+};

@@ -1,23 +1,23 @@
-import { arrayToErrorMessage } from "../es-utils/arrayToErrorMessage";
-import type { types } from "../types";
+import { errorMessages } from "../errorMessages";
+import type { ITYPES } from "../publicApi";
 
-import { symbolToTypesKeyFactory, _errorMessages } from "./symbolToTypesKeyFactory";
+import { symbolToTypesKeyFactory } from "./symbolToTypesKeyFactory";
 
 let symbolToTypesKey: ReturnType<typeof symbolToTypesKeyFactory>;
-let TYPES: types;
+let TYPES: ITYPES;
 
 beforeEach(() => {
     TYPES = {
-        a: Symbol(),
-        b: Symbol(),
+        a: Symbol("a"),
+        b: Symbol("b"),
     };
     symbolToTypesKey = symbolToTypesKeyFactory(TYPES);
 });
 
 describe(symbolToTypesKeyFactory.name, () => {
     it("throws error when provided with a symbol that does not exist in the TYPES", () => {
-        const symbol = Symbol();
-        expect(() => symbolToTypesKey(symbol)).toThrow(arrayToErrorMessage(_errorMessages.symbolNotInTYPES(symbol)));
+        const symbol = Symbol("symbol");
+        expect(() => symbolToTypesKey(symbol)).toThrow(errorMessages.symbolNotInTYPES(symbol));
     });
     it("returns the key of the TYPES that corresponds to the symbol", () => {
         expect(symbolToTypesKey(TYPES.a)).toBe("a");

@@ -1,187 +1,118 @@
-import { arrayToErrorMessage } from "../es-utils/arrayToErrorMessage";
+import { errorMessages } from "../errorMessages";
 import { Dic } from "./Dic";
-import { getRegistrationOf, _errorMessages } from "./getRegistrationOf";
-
-let dic: Dic;
-
-beforeEach(() => {
-    dic = new Dic();
-    dic.clearMemoizationTable();
-});
 
 describe(Dic.name, () => {
     describe(Dic.prototype.register.name, () => {
-        // so I use DI in this project to test the following part that I have not tested and commented it away?
-        // it.todo("calls validateAbstraction with the appropriate parameters", () => {
-        //     //
-        // });
-        // it.todo("calls validateDependencies with the appropriate parameters", () => {
-        //     //
-        // });
-        // it.todo("calls validateLifeCycle with the appropriate parameters", () => {
-        //     //
-        // });
-        // it.todo("calls validateExtra with the appropriate parameters", () => {
-        //     //
-        // });
-        // it.todo("calls throwIfAlreadyRegistered with the appropriate parameters", () => {
-        //     //
-        // });
-        // it.todo("calls isFactory with the appropriate parameters", () => {
-        //     //
-        // });
-        it("registers in the registry", () => {
+        /**
+         * Function have to have names because, because this creates more
+         * helpful error messages.
+         */
+        it("throws error when the registered factory has no name", () => {
+            const dic = new Dic();
+            expect(() =>
+                dic.register({
+                    abstraction: Symbol("mock"),
+                    dependencies: [],
+                    factory: function () {
+                        // some code
+                    },
+                    lifeCycle: "singleton",
+                })
+            ).toThrow(errorMessages.badFactoryName);
+        });
+        it("throws error when the abstraction is already registered", () => {
+            const dic = new Dic();
             const TYPES = {
-                foo: Symbol("foo"),
-                bar: Symbol("bar"),
-                baz: Symbol("baz"),
+                mock: Symbol("mock"),
             };
-
-            function fooFactory(bar: () => undefined, baz: () => undefined): string {
-                return String(bar()) + String(baz());
+            function mockFactory() {
+                //
             }
-            const abstraction = TYPES.foo;
-            const dependencies = [TYPES.bar, TYPES.baz];
-            const factory = fooFactory;
-            const lifeCycle = "singleton";
-            const intercept = [
-                (_: { concretion: string }): string => {
-                    const { concretion } = _;
-                    return concretion;
-                },
-            ];
-            dic.register({ abstraction, dependencies, factory, lifeCycle, intercept });
-
-            expect(dic._registry.get(TYPES.foo)).toEqual({
-                abstraction,
-                dependencies,
-                factory,
-                lifeCycle,
-                intercept,
-                hasBeenMemoized: false,
-            });
+            const register = () =>
+                dic.register({
+                    abstraction: TYPES.mock,
+                    dependencies: [],
+                    factory: mockFactory,
+                    lifeCycle: "singleton",
+                });
+            register();
+            expect(() => register()).toThrow(errorMessages.abstractionAlreadyRegistered(TYPES.mock));
+        });
+        /**
+         * Abstraction symbols have to have names because, because this creates
+         * more helpful error messages.
+         */
+        it("throws error when the registered abstraction symbol has no name", () => {
+            const dic = new Dic();
+            expect(() =>
+                dic.register({
+                    abstraction: Symbol(),
+                    dependencies: [],
+                    factory: function mock() {
+                        // some code
+                    },
+                    lifeCycle: "singleton",
+                })
+            ).toThrow(errorMessages.symbolHasToHaveName);
+        });
+        it("throws error when the registration has different number of dependencies from its factory", () => {
+            const dic = new Dic();
+            function mockFactory() {
+                return;
+            }
+            expect(() =>
+                dic.register({
+                    abstraction: Symbol("mock"),
+                    dependencies: [Symbol("some dependency")],
+                    factory: mockFactory,
+                    lifeCycle: "singleton",
+                })
+            ).toThrow(errorMessages.inconsistentNumberOfDependencies(mockFactory));
         });
     });
     describe(Dic.prototype.unregister.name, () => {
-        it("un-registers the provided abstraction from the registry", () => {
+        it("un-registers the registered abstraction from the registry and returns `true`", () => {
+            const dic = new Dic();
+            const TYPES = {
+                my: Symbol("my"),
+            };
             function myFactory() {
                 //
             }
-            const TYPES = {
-                my: Symbol(),
-            };
             dic.register({
                 abstraction: TYPES.my,
                 dependencies: [],
                 factory: myFactory,
                 lifeCycle: "singleton",
             });
-            dic.unregister({ abstraction: TYPES.my });
+            expect(dic.unregister({ abstraction: TYPES.my })).toBe(true);
             expect(() => dic.get({ abstraction: TYPES.my })).toThrow();
         });
-        it("works when the unregistered abstraction that is dependency to other factories, gets registered again", () => {
+        it("returns false when the abstraction to unregister is not registered", () => {
+            const dic = new Dic();
             const TYPES = {
-                top: Symbol("top"),
-                left: Symbol("left"),
-                right: Symbol("right"),
-                bottom: Symbol("bottom"),
+                my: Symbol("my"),
             };
-            type ILeft = () => number;
-            type IRight = () => number;
-            type ITop = () => number;
-            type IBottom = () => number;
-            dic.register({
-                abstraction: TYPES.top,
-                dependencies: [TYPES.left, TYPES.right],
-                factory: (left: ILeft, right: IRight): ITop => () => left() + right(),
-                lifeCycle: "singleton",
-            });
-            dic.register({
-                abstraction: TYPES.left,
-                dependencies: [],
-                factory: (): ILeft => () => -1,
-                lifeCycle: "singleton",
-            });
-            dic.register({
-                abstraction: TYPES.right,
-                dependencies: [TYPES.bottom],
-                factory: (bottom: IBottom): IRight => () => bottom(),
-                lifeCycle: "singleton",
-            });
-            dic.register({
-                abstraction: TYPES.bottom,
-                dependencies: [],
-                factory: (): IBottom => () => +1,
-                lifeCycle: "singleton",
-            });
-            dic.unregister({
-                abstraction: TYPES.bottom,
-            });
-            expect(() => dic.get({ abstraction: TYPES.bottom })).toThrow(
-                arrayToErrorMessage(_errorMessages.abstractionNotRegisteredToDic(TYPES.bottom))
-            );
-            dic.register({
-                abstraction: TYPES.bottom,
-                dependencies: [],
-                factory: (): IBottom => () => +2,
-                lifeCycle: "singleton",
-            });
-
-            expect(
-                dic.get<ITop>({
-                    abstraction: TYPES.top,
-                })()
-            ).toBe(1);
-        });
-    });
-    describe(Dic.prototype.clearMemoizationTable.name, () => {
-        it("clears the memoization table", () => {
-            function myFactory() {
-                //
-            }
-            const TYPES = {
-                my: Symbol(),
-            };
-            dic.register({
-                abstraction: TYPES.my,
-                dependencies: [],
-                factory: myFactory,
-                lifeCycle: "singleton",
-            });
-
-            dic.get({ abstraction: TYPES.my });
-            expect([...dic._memoizationTable.entries()].length).toBe(1);
-            dic.clearMemoizationTable();
-            expect([...dic._memoizationTable.entries()].length).toBe(0);
-        });
-        it("makes all registration have false for have been memoized", () => {
-            function fooFactory() {
-                return undefined;
-            }
-            const TYPES = {
-                foo: Symbol("foo"),
-            };
-            dic.register({
-                abstraction: TYPES.foo,
-                dependencies: [],
-                factory: fooFactory,
-                lifeCycle: "singleton",
-            });
-            dic.get({ abstraction: TYPES.foo });
-            const registration = getRegistrationOf(dic._registry, TYPES.foo);
-            expect(registration.hasBeenMemoized).toBe(true);
-            dic.clearMemoizationTable();
-            expect(registration.hasBeenMemoized).toBe(false);
+            expect(dic.unregister({ abstraction: TYPES.my })).toBe(false);
         });
     });
     describe(Dic.prototype.get.name, () => {
-        it("memoizes the result of the factory for singleton scope, when it is get-ed", () => {
+        it("throws error for getting an abstraction that does not exist", () => {
+            const dic = new Dic();
             const TYPES = {
-                my: Symbol("foo"),
+                mock: Symbol("mock"),
             };
-            const myFactoryReturnValue = {};
+            expect(() => dic.get({ abstraction: TYPES.mock })).toThrow(
+                errorMessages.abstractionNotRegisteredToDic(TYPES.mock)
+            );
+        });
+        it("memoizes for singleton lifecycle", () => {
+            const dic = new Dic();
+            const TYPES = {
+                my: Symbol("my"),
+            };
             function myFactory() {
-                return myFactoryReturnValue;
+                return {};
             }
             dic.register({
                 abstraction: TYPES.my,
@@ -190,97 +121,120 @@ describe(Dic.name, () => {
                 lifeCycle: "singleton",
             });
             expect(dic.get({ abstraction: TYPES.my })).toBe(dic.get({ abstraction: TYPES.my }));
-            expect(dic.get({ abstraction: TYPES.my })).toBe(dic.get({ abstraction: TYPES.my }));
-            expect(dic.get({ abstraction: TYPES.my })).toBe(myFactoryReturnValue);
         });
-        it("does not memoize the result of the factory for transient scope, when it is get-ed", () => {
+        it("does not memoize for transient lifecycle", () => {
+            const dic = new Dic();
             const TYPES = {
-                foo: Symbol("foo"),
+                my: Symbol("my"),
             };
-            const fooReturnValue = 1;
-            function fooFactory() {
-                return fooReturnValue;
+            function myFactory() {
+                return {};
             }
             dic.register({
-                abstraction: TYPES.foo,
+                abstraction: TYPES.my,
                 dependencies: [],
-                factory: fooFactory,
+                factory: myFactory,
                 lifeCycle: "transient",
             });
-            dic.get({ abstraction: TYPES.foo });
-            expect(dic._memoizationTable.get(TYPES.foo)).toBeUndefined();
+            expect(dic.get({ abstraction: TYPES.my })).not.toBe(dic.get({ abstraction: TYPES.my }));
         });
         it("wraps the get value with the function provided by intercept", () => {
+            const dic = new Dic();
             const TYPES = {
                 foo: Symbol("foo"),
             };
             const array: number[] = [];
             const returnedValue = 1;
             function fooFactory() {
-                return () => {
+                return function foo() {
                     array.push(1);
                     return returnedValue;
                 };
             }
-            dic.register({
-                abstraction: TYPES.foo,
-                dependencies: [],
-                factory: fooFactory,
-                lifeCycle: "transient",
-                intercept: [
-                    (_) => {
-                        const { concretion: v } = _;
-                        return () => {
-                            array.push(0);
-                            const result = v();
-                            array.push(2);
-                            return result;
-                        };
-                    },
-                ],
-            });
-            expect(
-                dic.get<ReturnType<typeof fooFactory>>({ abstraction: TYPES.foo })()
-            ).toBe(returnedValue);
+            dic.register(
+                {
+                    abstraction: TYPES.foo,
+                    dependencies: [],
+                    factory: fooFactory,
+                    lifeCycle: "transient",
+                },
+                {
+                    intercept: [
+                        (_) => {
+                            const { concretion: v } = _;
+                            return () => {
+                                array.push(0);
+                                const result = v();
+                                array.push(2);
+                                return result;
+                            };
+                        },
+                    ],
+                }
+            );
+            expect(dic.get<ReturnType<typeof fooFactory>>({ abstraction: TYPES.foo })()).toBe(returnedValue);
             expect(array).toEqual([0, 1, 2]);
         });
         it("manually injects the provided concretions of inject, when it resolves the dependency graph to concretions", () => {
+            const dic = new Dic();
             const TYPES = {
                 top: Symbol("top"),
                 left: Symbol("left"),
                 right: Symbol("right"),
                 bottom: Symbol("bottom"),
             };
-            type ILeft = () => number;
-            type IRight = () => number;
-            type ITop = () => number;
-            type IBottom = () => number;
+            type interfaces = {
+                left: () => number;
+                right: () => number;
+                top: () => number;
+                bottom: () => number;
+            };
+            function leftFactory(): interfaces["left"] {
+                return function left() {
+                    return -1;
+                };
+            }
+            function rightFactory(bottom: interfaces["bottom"]): interfaces["right"] {
+                return function right() {
+                    return bottom();
+                };
+            }
+            function bottomFactory(): interfaces["bottom"] {
+                return function bottom() {
+                    return 1;
+                };
+            }
+            function topFactory(left: interfaces["left"], right: interfaces["right"]): interfaces["top"] {
+                return function top() {
+                    return left() + right();
+                };
+            }
             dic.register({
                 abstraction: TYPES.top,
                 dependencies: [TYPES.left, TYPES.right],
-                factory: (left: ILeft, right: IRight): ITop => () => left() + right(),
+                factory: topFactory,
                 lifeCycle: "singleton",
             });
             dic.register({
                 abstraction: TYPES.left,
                 dependencies: [],
-                factory: (): ILeft => () => -1,
+                factory: leftFactory,
                 lifeCycle: "singleton",
             });
             dic.register({
                 abstraction: TYPES.right,
                 dependencies: [TYPES.bottom],
-                factory: (bottom: IBottom): IRight => () => bottom(),
+                factory: rightFactory,
                 lifeCycle: "singleton",
             });
             dic.register({
                 abstraction: TYPES.bottom,
                 dependencies: [],
-                factory: (): IBottom => () => +1,
+                factory: bottomFactory,
                 lifeCycle: "singleton",
             });
             expect(
-                dic.get<ITop>({
+                dic.get<interfaces["top"]>({
                     abstraction: TYPES.top,
                     inject: (() => {
                         const map = new Map();
@@ -293,6 +247,7 @@ describe(Dic.name, () => {
             ).toBe(+1);
         });
         it("works as expected for a more realistic example", () => {
+            const dic = new Dic();
             const TYPES = {
                 foo: Symbol("foo"),
                 bar: Symbol("bar"),
@@ -316,21 +271,24 @@ describe(Dic.name, () => {
             function bazFactory(): IBaz {
                 return 1;
             }
-
-            dic.register({
-                abstraction: TYPES.foo,
-                dependencies: [TYPES.bar],
-                factory: fooFactory,
-                lifeCycle: "transient",
-                intercept: [
-                    (_) => {
-                        const { concretion: v } = _;
-                        v.array.unshift(0);
-                        v.array.push(2);
-                        return v;
-                    },
-                ],
-            });
+            dic.register(
+                {
+                    abstraction: TYPES.foo,
+                    dependencies: [TYPES.bar],
+                    factory: fooFactory,
+                    lifeCycle: "transient",
+                },
+                {
+                    intercept: [
+                        (_) => {
+                            const { concretion: v } = _;
+                            v.array.unshift(0);
+                            v.array.push(2);
+                            return v;
+                        },
+                    ],
+                }
+            );
 
             dic.register({
                 abstraction: TYPES.bar,
@@ -350,6 +308,29 @@ describe(Dic.name, () => {
             expect(res).toEqual({
                 array: [0, 1, 2],
             });
+        });
+    });
+    describe(Dic.prototype.clearMemoizationTable.name, () => {
+        it("clears the memoization table", () => {
+            const dic = new Dic();
+            function myFactory() {
+                return {};
+            }
+            const TYPES = {
+                my: Symbol("my"),
+            };
+            dic.register({
+                abstraction: TYPES.my,
+                dependencies: [],
+                factory: myFactory,
+                lifeCycle: "singleton",
+            });
+
+            const valueBeforeClearTable = dic.get({ abstraction: TYPES.my });
+            dic.clearMemoizationTable();
+            const valueAfterClearTable = dic.get({ abstraction: TYPES.my });
+
+            expect(valueBeforeClearTable).not.toBe(valueAfterClearTable);
         });
     });
 });

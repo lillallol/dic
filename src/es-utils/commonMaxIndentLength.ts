@@ -1,6 +1,6 @@
 /**
  * @description
- * It returns the common minimum indentation length among the lines of the
+ * It returns the common maximum indentation length among the lines of the
  * provided string. Lines that are only spaces are not taken into account.
  *
  * It throws error if a `\s` character that is not ` ` (space) is encountered
@@ -13,7 +13,7 @@
  * //returns
  * 3;
  */
-export function commonMinIndentLength(s: string): number {
+export function commonMaxIndentLength(s: string): number {
     let minIndentLength = Infinity;
     s.split("\n").forEach((line) => {
         if (/^[ ]+$/.test(line) || line.length === 0) return;

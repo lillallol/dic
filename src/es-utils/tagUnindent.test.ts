@@ -1,7 +1,7 @@
 import { tagUnindent } from "./tagUnindent";
 
 describe(tagUnindent.name, () => {
-    describe("removes the first and last line and then the minimum common indentation from the provided template literal", () => {
+    describe("removes the first and last line and then the maximum common indentation from the provided template literal", () => {
         it("works for no placeholders", () => {
             expect(tagUnindent`
                     Hello

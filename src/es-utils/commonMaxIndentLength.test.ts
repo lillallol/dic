@@ -1,9 +1,9 @@
-import { commonMinIndentLength, _errorMessages } from "./commonMinIndentLength";
+import { commonMaxIndentLength, _errorMessages } from "./commonMaxIndentLength";
 
-describe(commonMinIndentLength.name, () => {
+describe(commonMaxIndentLength.name, () => {
     it("returns the length of the common minimum indentation of the provided string, ignoring empty lines", () => {
         expect(
-            commonMinIndentLength(
+            commonMaxIndentLength(
                 // prettier-ignore
                 "\n" +
                 "    hello\n" +
@@ -14,7 +14,7 @@ describe(commonMinIndentLength.name, () => {
     });
     it("throws if the provided string has tab character in the indentation string", () => {
         expect(() =>
-            commonMinIndentLength(
+            commonMaxIndentLength(
                 // prettier-ignore
                 "\n" +
                 "hello\n" +
